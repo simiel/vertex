@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 const courses = [
   { mark: "N", markClass: "next", title: "Next.js for Production", description: "Build scalable, high-performance web applications with Next.js.", level: "Intermediate", duration: "18h 24m", modules: "12 modules" },
@@ -38,7 +39,7 @@ export default function Home() {
       <header className="home-header">
         <Link className="home-brand" href="/" aria-label="Vertex home"><span className="home-logo">▼</span><span>Vertex</span></Link>
         <nav className="home-nav" aria-label="Primary navigation"><a href="#courses">Courses</a><a href="#learning">My Learning</a></nav>
-        <div className="home-actions"><button aria-label="Notifications"><Icon name="bell" /></button><button className="home-avatar" aria-label="Open profile">S</button></div>
+        <div className="home-actions"><button aria-label="Notifications"><Icon name="bell" /></button><Show when="signed-out"><div className="home-auth"><SignInButton mode="modal"><button>Sign in</button></SignInButton><SignUpButton mode="modal"><button className="home-signup">Sign up</button></SignUpButton></div></Show><Show when="signed-in"><UserButton /></Show></div>
       </header>
 
       <section className="home-hero" aria-labelledby="home-title">
