@@ -7,7 +7,7 @@ export const COURSES_QUERY = defineQuery(`
     instructor->{_id, name, slug, photo},
     category->{_id, title, slug},
     "moduleCount": count(modules),
-    modules[]{_key, title, summary, lessons[]->{_id, title, slug, poster, durationSeconds, freePreview}}
+    modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview}}
   }
 `)
 
@@ -17,7 +17,7 @@ export const COURSE_BY_SLUG_QUERY = defineQuery(`
     learningOutcomes[]{_key, icon, title, description},
     instructor->{_id, name, slug, photo, expertise, bio},
     category->{_id, title, slug},
-    modules[]{_key, title, summary, lessons[]->{_id, title, slug, poster, durationSeconds, freePreview, studentCount}}
+    modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview, studentCount}}
   }
 `)
 

@@ -1,11 +1,26 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { getCourses } from "@/sanity/data";
+import { urlFor } from "@/sanity/lib/image";
+import type { SanityImageSource } from "@sanity/image-url";
 
-const courses = [
-  { mark: "N", markClass: "next", title: "Next.js for Production", description: "Build scalable, high-performance web applications with Next.js.", level: "Intermediate", duration: "18h 24m", modules: "12 modules" },
-  { mark: "", markClass: "docker", title: "Docker Essentials", description: "Containerize applications and streamline your development workflow.", level: "Beginner", duration: "10h 12m", modules: "8 modules" },
-  { mark: "TS", markClass: "typescript", title: "TypeScript Deep Dive", description: "Go beyond the basics and write safer, more expressive code.", level: "Intermediate", duration: "14h 36m", modules: "10 modules" },
-];
+type Course = {
+  _id: string;
+  title: string;
+  slug: { current: string };
+  summary: string;
+  level: string;
+  studentCount: number;
+  coverImage?: { alt?: string; [key: string]: unknown };
+  modules: { lessons: { duration?: number }[] }[];
+};
+
+function formatDuration(seconds: number) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.round((seconds % 3600) / 60);
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
 
 function Icon({ name }: { name: "search" | "bell" | "arrow" | "level" | "clock" | "file" | "star" }) {
   const paths = {
@@ -20,20 +35,23 @@ function Icon({ name }: { name: "search" | "bell" | "arrow" | "level" | "clock" 
   return <svg className={`home-icon icon-${name}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-function CourseCard({ course }: { course: typeof courses[number] }) {
-  return <a className="home-course-card" href="#courses">
-    <div className={`course-mark ${course.markClass}`} aria-label={`${course.title} logo`}>{course.markClass === "docker" ? <span className="docker-whale">♟</span> : course.mark}</div>
+function CourseCard({ course }: { course: Course }) {
+  const duration = course.modules.reduce((total, module) => total + module.lessons.reduce((sum, lesson) => sum + (lesson.duration ?? 0), 0), 0);
+  const image = course.coverImage ? urlFor(course.coverImage as SanityImageSource).width(240).height(240).fit("crop").url() : null;
+  return <Link className="home-course-card" href={`/courses/${course.slug.current}`}>
+    <div className="course-mark" aria-label={`${course.title} cover image`}>{image ? <Image src={image} alt={course.coverImage?.alt ?? course.title} width={240} height={240} unoptimized /> : <span>{course.title.slice(0, 1)}</span>}</div>
     <h3>{course.title}</h3>
-    <p>{course.description}</p>
+    <p>{course.summary}</p>
     <div className="course-meta">
-      <span><Icon name="level" />{course.level}</span>
-      <span><Icon name="clock" />{course.duration}</span>
-      <span><Icon name="file" />{course.modules}</span>
+      <span><Icon name="level" />{course.level[0].toUpperCase() + course.level.slice(1)}</span>
+      <span><Icon name="clock" />{formatDuration(duration)}</span>
+      <span><Icon name="file" />{course.modules.length} modules</span>
     </div>
-  </a>;
+  </Link>;
 }
 
-export default function Home() {
+export default async function Home() {
+  const courses = await getCourses() as Course[];
   return <main className="home-page">
     <div className="home-canvas">
       <header className="home-header">
@@ -52,7 +70,7 @@ export default function Home() {
 
       <section id="courses" className="home-courses" aria-labelledby="courses-title">
         <div className="section-heading"><h2 id="courses-title">All Courses</h2><a href="#courses">View all courses <Icon name="arrow" /></a></div>
-        <div className="course-grid">{courses.map(course => <CourseCard key={course.title} course={course} />)}</div>
+        <div className="course-grid">{courses.length ? courses.map(course => <CourseCard key={course._id} course={course} />) : <p className="home-empty">Courses are being prepared. Check back soon.</p>}</div>
         <div id="learning" className="home-note"><span className="note-rule" /><Icon name="star" /><span>New courses and lessons added every week.</span><span className="note-rule" /></div>
         <div className="home-bars" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
       </section>
