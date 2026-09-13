@@ -1,9 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
+import posthog from 'posthog-js'
+import { useEffect, useRef, useState } from 'react'
 
 type Lesson = { _id: string; title: string; duration?: number; freePreview?: boolean }
 type Module = { _key: string; title: string; summary?: string; lessons: Lesson[] }
+
+const isPostHogConfigured = Boolean(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && process.env.NEXT_PUBLIC_POSTHOG_HOST)
+
+export function PostHogIdentity() {
+  const { isLoaded, user } = useUser()
+  const identifiedUserId = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoaded || !isPostHogConfigured) return
+
+    if (user) {
+      if (identifiedUserId.current !== user.id) {
+        if (identifiedUserId.current) posthog.reset()
+
+        posthog.identify(user.id, {
+          email: user.primaryEmailAddress?.emailAddress,
+          name: user.fullName ?? undefined,
+        })
+        identifiedUserId.current = user.id
+      }
+      return
+    }
+
+    if (identifiedUserId.current) {
+      posthog.reset()
+      identifiedUserId.current = null
+    }
+  }, [isLoaded, user])
+
+  return null
+}
 
 function formatDuration(seconds: number) {
   const hours = Math.floor(seconds / 3600)
@@ -22,7 +56,15 @@ export function CourseContent({ modules }: { modules: Module[] }) {
         const seconds = module.lessons.reduce((total, lesson) => total + (lesson.duration ?? 0), 0)
         const isOpen = expanded === module._key
         return <div className="module-row" key={module._key}>
-          <button className="module-summary" onClick={() => setExpanded(isOpen ? null : module._key)} aria-expanded={isOpen}>
+          <button className="module-summary" onClick={() => {
+            setExpanded(isOpen ? null : module._key)
+            if (!isOpen && isPostHogConfigured) {
+              posthog.capture('course_module_expanded', {
+                module_id: module._key,
+                module_position: index + 1,
+              })
+            }
+          }} aria-expanded={isOpen}>
             <span className="module-number">{index + 1}</span>
             <span className="module-copy"><strong>{module.title}</strong><small>{module.summary}</small></span>
             <span className="module-duration">{formatDuration(seconds)}</span>
@@ -36,7 +78,24 @@ export function CourseContent({ modules }: { modules: Module[] }) {
   </>
 }
 
-export function BookmarkButton() {
+export function CourseLearningLink({ href, courseSlug, children }: { href: string; courseSlug: string; children: React.ReactNode }) {
+  const handleClick = () => {
+    if (href === '#' || !isPostHogConfigured) return
+    posthog.capture('course_learning_started', { course_slug: courseSlug })
+  }
+
+  return <Link className="continue-button" href={href} onClick={handleClick}>{children}</Link>
+}
+
+export function BookmarkButton({ courseSlug }: { courseSlug: string }) {
   const [bookmarked, setBookmarked] = useState(false)
-  return <button className={`bookmark-button ${bookmarked ? 'is-bookmarked' : ''}`} onClick={() => setBookmarked(!bookmarked)}><span aria-hidden="true">♡</span>{bookmarked ? 'Bookmarked' : 'Bookmark'}</button>
+  const handleBookmark = () => {
+    const isBookmarked = !bookmarked
+    setBookmarked(isBookmarked)
+    if (isPostHogConfigured) {
+      posthog.capture('course_bookmarked', { course_slug: courseSlug, is_bookmarked: isBookmarked })
+    }
+  }
+
+  return <button className={`bookmark-button ${bookmarked ? 'is-bookmarked' : ''}`} onClick={handleBookmark}><span aria-hidden="true">♡</span>{bookmarked ? 'Bookmarked' : 'Bookmark'}</button>
 }
