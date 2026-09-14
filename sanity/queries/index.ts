@@ -7,7 +7,7 @@ export const COURSES_QUERY = defineQuery(`
     instructor->{_id, name, slug, photo},
     category->{_id, title, slug},
     "moduleCount": count(modules),
-    modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview}}
+    modules[]{_key, title, summary, lessons[]->{_id, title, slug, "poster": coalesce(poster, thumbnail), "durationSeconds": coalesce(durationSeconds, duration), "thumbnail": coalesce(poster, thumbnail), "duration": coalesce(durationSeconds, duration), freePreview}}
   }
 `)
 
@@ -17,16 +17,16 @@ export const COURSE_BY_SLUG_QUERY = defineQuery(`
     learningOutcomes[]{_key, icon, title, description},
     instructor->{_id, name, slug, photo, expertise, bio},
     category->{_id, title, slug},
-    modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview, studentCount}}
+    modules[]{_key, title, summary, lessons[]->{_id, title, slug, "poster": coalesce(poster, thumbnail), "durationSeconds": coalesce(durationSeconds, duration), "thumbnail": coalesce(poster, thumbnail), "duration": coalesce(durationSeconds, duration), freePreview, studentCount}}
   }
 `)
 
 export const LESSON_BY_SLUG_QUERY = defineQuery(`
   *[_type == "lesson" && slug.current == $slug][0] {
-    _id, _updatedAt, title, slug, videoUrl, thumbnail, duration, freePreview, studentCount,
+    _id, _updatedAt, title, slug, videoUrl, "poster": coalesce(poster, thumbnail), "durationSeconds": coalesce(durationSeconds, duration), "thumbnail": coalesce(poster, thumbnail), "duration": coalesce(durationSeconds, duration), freePreview, studentCount,
     notes, keyPoints, proTip, resources[]{_key, type, title, description, url},
     "courses": *[_type == "course" && references(^._id)]{
-      _id, title, slug, level, modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview, studentCount}}
+      _id, title, slug, level, modules[]{_key, title, summary, lessons[]->{_id, title, slug, "poster": coalesce(poster, thumbnail), "durationSeconds": coalesce(durationSeconds, duration), "thumbnail": coalesce(poster, thumbnail), "duration": coalesce(durationSeconds, duration), freePreview, studentCount}}
     }
   }
 `)

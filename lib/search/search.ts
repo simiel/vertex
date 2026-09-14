@@ -5,6 +5,7 @@ import {openai} from '@ai-sdk/openai'
 import {generateText, Output, stepCountIs} from 'ai'
 import {z} from 'zod'
 import {serverClient} from '@/sanity/lib/server-client'
+import {urlFor} from '@/sanity/lib/image'
 import type {SearchResult} from './search-types'
 export type {SearchResult} from './search-types'
 
@@ -19,7 +20,7 @@ const modelResultSchema = z.object({results: z.array(z.object({
   kind: z.enum(['video', 'lesson']), id: z.string().nullable(), course: z.string().nullable(), courseIcon: z.string().nullable(), module: z.string().nullable(), lessonNumber: z.string().nullable(), lessonTitle: z.string().nullable(), lessonSlug: z.string().nullable(), thumbnailUrl: z.string().nullable(), durationSeconds: z.number().int().nonnegative().nullable(), description: z.string().nullable(), matchedSeconds: z.number().int().nonnegative().nullable(), matchedLabel: z.string().nullable(), keyPoints: z.array(z.string()).nullable(),
 }))})
 
-const LESSON_CONTEXT_QUERY = `*[_type == "lesson" && (slug.current == $slug || _id == $id)][0]{_id, title, slug, poster, durationSeconds, keyPoints, "course": *[_type == "course" && references(^._id)][0]{title, modules[]{title, lessons[]->{_id, title, slug}}}}`
+const LESSON_CONTEXT_QUERY = `*[_type == "lesson" && (slug.current == $slug || _id == $id)][0]{_id, title, slug, "poster": coalesce(poster, thumbnail), "durationSeconds": coalesce(durationSeconds, duration), keyPoints, "course": *[_type == "course" && references(^._id)][0]{title, modules[]{title, lessons[]->{_id, title, slug}}}}`
 
 const SYSTEM_PROMPT = `You are Vertex's grounded learning search agent. Help learners find real courses and lessons using Sanity Context tools.
 
@@ -69,13 +70,21 @@ export async function searchVertex(query: string): Promise<SearchResult[]> {
     })
     const normalized = await Promise.all(response.output.results.map(async (item) => {
       const base = Object.fromEntries(Object.entries(item).filter(([, value]) => value !== null)) as Record<string, unknown>
+      if (base.kind !== 'video' && base.kind !== 'lesson') return null
+      if (typeof base.lessonSlug !== 'string' || !/^[a-z0-9][a-z0-9-]*$/i.test(base.lessonSlug)) return null
       const context = await serverClient.fetch(LESSON_CONTEXT_QUERY, {slug: item.lessonSlug || '', id: item.id || ''}) as {title?: string; slug?: {current?: string}; poster?: unknown; durationSeconds?: number; keyPoints?: string[]; course?: {title?: string; modules?: {title?: string; lessons?: {_id?: string; title?: string; slug?: {current?: string}}[]}[]}}
+      if (!context?.slug?.current || !context.course?.title || !Number.isFinite(context.durationSeconds)) return null
+      const durationSeconds = context.durationSeconds as number
       const moduleMatch = context.course?.modules?.find((candidate) => candidate.lessons?.some((lesson) => lesson._id === item.id || lesson.slug?.current === item.lessonSlug))
       const lessonIndex = moduleMatch?.lessons?.findIndex((lesson) => lesson._id === item.id || lesson.slug?.current === item.lessonSlug) ?? -1
       const moduleIndex = context.course?.modules?.findIndex((candidate) => candidate === moduleMatch) ?? -1
-      return {...base, id: base.id || context.slug?.current, course: base.course || context.course?.title, module: base.module || moduleMatch?.title, lessonNumber: base.lessonNumber || (moduleIndex >= 0 && lessonIndex >= 0 ? `Lesson ${moduleIndex + 1}.${lessonIndex + 1}` : 'Lesson'), lessonTitle: base.lessonTitle || context.title, lessonSlug: base.lessonSlug || context.slug?.current, description: base.description || (context.title ? `Learn ${context.title.toLowerCase()} in ${context.course?.title || 'this course'}.` : undefined), durationSeconds: base.durationSeconds || context.durationSeconds, keyPoints: base.keyPoints || context.keyPoints}
+      const matchedSeconds = typeof base.matchedSeconds === 'number' && Number.isInteger(base.matchedSeconds) ? base.matchedSeconds : undefined
+      if (base.kind === 'video' && (matchedSeconds === undefined || matchedSeconds < 0 || matchedSeconds > durationSeconds)) return null
+      const thumbnailUrl = context.poster ? urlFor(context.poster as never).width(640).height(360).fit('crop').url() : undefined
+      const result = {...base, id: typeof base.id === 'string' ? base.id : context.slug.current, course: context.course.title, module: typeof base.module === 'string' ? base.module : (moduleMatch?.title || 'Lesson'), lessonNumber: typeof base.lessonNumber === 'string' ? base.lessonNumber : (moduleIndex >= 0 && lessonIndex >= 0 ? `Lesson ${moduleIndex + 1}.${lessonIndex + 1}` : 'Lesson'), lessonTitle: context.title, lessonSlug: context.slug.current, thumbnailUrl: thumbnailUrl || (typeof base.thumbnailUrl === 'string' ? base.thumbnailUrl : undefined), description: typeof base.description === 'string' ? base.description : `Learn ${context.title?.toLowerCase() || 'this topic'} in ${context.course.title}.`, durationSeconds, keyPoints: Array.isArray(base.keyPoints) ? base.keyPoints : (context.keyPoints || [])}
+      return result
     }))
-    return resultSchema.parse({results: normalized}).results
+    return resultSchema.parse({results: normalized.filter((item) => item !== null)}).results
   } finally {
     await mcp.close()
   }
