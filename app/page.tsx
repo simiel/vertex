@@ -4,6 +4,7 @@ import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { getCourses } from "@/sanity/data";
 import { urlFor } from "@/sanity/lib/image";
 import type { SanityImageSource } from "@sanity/image-url";
+import {AnalyticsView} from "./analytics-view";
 
 type Course = {
   _id: string;
@@ -52,7 +53,7 @@ function CourseCard({ course }: { course: Course }) {
 
 export default async function Home() {
   const courses = await getCourses() as Course[];
-  return <main className="home-page">
+  return <main className="home-page"><AnalyticsView event={{name: "catalog_viewed", properties: {course_count: courses.length}}} />
     <div className="home-canvas">
       <header className="home-header">
         <Link className="home-brand" href="/" aria-label="Vertex home"><span className="home-logo">▼</span><span>Vertex</span></Link>

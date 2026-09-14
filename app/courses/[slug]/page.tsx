@@ -6,6 +6,7 @@ import { CourseContent, CourseLearningLink, BookmarkButton } from './course-cont
 import { getCourseBySlug } from '@/sanity/data'
 import { urlFor } from '@/sanity/lib/image'
 import type { SanityImageSource } from '@sanity/image-url'
+import {AnalyticsView} from '@/app/analytics-view'
 
 type Lesson = { _id: string; title: string; slug: { current: string }; duration?: number; freePreview?: boolean }
 type Course = {
@@ -29,13 +30,13 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const lessons = course.modules.flatMap((module) => module.lessons)
   const totalSeconds = lessons.reduce((sum, lesson) => sum + (lesson.duration ?? 0), 0)
   const cover = course.coverImage ? urlFor(course.coverImage).width(900).height(900).fit('crop').url() : null
-  return <main className="course-page"><div className="course-canvas">
+  return <main className="course-page"><AnalyticsView event={{name: 'course_viewed', properties: {course_slug: slug, lesson_count: lessons.length, module_count: course.modules.length}}} /><div className="course-canvas">
     <header className="course-header"><Link className="course-brand" href="/"><span className="course-logo">▼</span><span>Vertex</span></Link><nav><Link href="/">Courses</Link><Link href="/my-learning">My Learning</Link></nav><div className="course-actions"><button aria-label="Notifications"><Icon name="bell" /></button><Show when="signed-in"><UserButton /></Show></div></header>
     <div className="course-inner">
       <div className="course-breadcrumb"><Link href="/">All Courses</Link><span>›</span><span>{course.title}</span></div>
       <section className="course-hero"><div className="course-cover">{cover ? <Image src={cover} alt={course.coverImage?.alt ?? course.title} width={900} height={900} unoptimized /> : <span>N</span>}</div><div className="course-intro">{course.popular && <span className="popular-badge">POPULAR</span>}<h1>{course.title}</h1><p>{course.summary}</p><div className="course-meta"><span><Icon name="level" />{course.level[0].toUpperCase() + course.level.slice(1)}</span><span><Icon name="clock" />{formatDuration(totalSeconds)}</span><span><Icon name="file" />{course.modules.length} modules</span><span><Icon name="users" />{(course.studentCount / 1000).toFixed(1)}k students</span></div><div className="course-ctas"><CourseLearningLink href={lessons[0] ? `/lessons/${lessons[0].slug.current}` : '#'} courseSlug={slug}>Continue Learning <Icon name="arrow" /></CourseLearningLink><BookmarkButton courseSlug={slug} /></div></div></section>
       <section className="outcomes-panel"><h2>What you’ll learn</h2><div className="outcomes-grid">{course.learningOutcomes.map((outcome) => <article key={outcome._key}><span className="outcome-icon">{outcome.icon === 'layers' ? '▱' : outcome.icon === 'gauge' ? '◔' : outcome.icon === 'rocket' ? '⌁' : '◉'}</span><div><h3>{outcome.title}</h3><p>{outcome.description}</p></div></article>)}</div></section>
-      <section className="content-section"><div className="content-heading"><h2>Course Content</h2><span>{course.modules.length} modules <b>•</b> {formatDuration(totalSeconds)}</span></div><CourseContent modules={course.modules} /></section>
+      <section className="content-section"><div className="content-heading"><h2>Course Content</h2><span>{course.modules.length} modules <b>•</b> {formatDuration(totalSeconds)}</span></div><CourseContent modules={course.modules} courseSlug={slug} /></section>
       <section className="progress-panel"><div><small>Your Progress</small><strong>Ready to begin</strong></div><div className="progress-track"><span /></div><CourseLearningLink href={lessons[0] ? `/lessons/${lessons[0].slug.current}` : '#'} courseSlug={slug}>Start Learning <Icon name="arrow" /></CourseLearningLink></section>
     </div>
   </div></main>
