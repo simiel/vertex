@@ -23,10 +23,10 @@ export const COURSE_BY_SLUG_QUERY = defineQuery(`
 
 export const LESSON_BY_SLUG_QUERY = defineQuery(`
   *[_type == "lesson" && slug.current == $slug][0] {
-    _id, _updatedAt, title, slug, videoUrl, poster, durationSeconds, freePreview, studentCount,
+    _id, _updatedAt, title, slug, videoUrl, thumbnail, duration, freePreview, studentCount,
     notes, keyPoints, proTip, resources[]{_key, type, title, description, url},
     "courses": *[_type == "course" && references(^._id)]{
-      _id, title, slug, modules[]{_key, title, lessons[]->{_id}}
+      _id, title, slug, level, modules[]{_key, title, summary, lessons[]->{_id, title, slug, thumbnail, duration, freePreview, studentCount}}
     }
   }
 `)

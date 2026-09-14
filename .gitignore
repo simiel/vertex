@@ -41,6 +41,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# offline video ingestion snapshots and generated artifacts
+/studio/scripts/video-ingestion/raw/
+/studio/scripts/video-ingestion/generated/
+/studio/scripts/video-ingestion/reports/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

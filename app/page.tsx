@@ -4,6 +4,7 @@ import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { getCourses } from "@/sanity/data";
 import { urlFor } from "@/sanity/lib/image";
 import type { SanityImageSource } from "@sanity/image-url";
+import {AnalyticsView} from "./analytics-view";
 
 type Course = {
   _id: string;
@@ -52,7 +53,7 @@ function CourseCard({ course }: { course: Course }) {
 
 export default async function Home() {
   const courses = await getCourses() as Course[];
-  return <main className="home-page">
+  return <main className="home-page"><AnalyticsView event={{name: "catalog_viewed", properties: {course_count: courses.length}}} />
     <div className="home-canvas">
       <header className="home-header">
         <Link className="home-brand" href="/" aria-label="Vertex home"><span className="home-logo">▼</span><span>Vertex</span></Link>
@@ -65,7 +66,7 @@ export default async function Home() {
         <h1 id="home-title">Search your learning<br />in plain English.</h1>
         <p>Vertex understands what you want to learn and<br className="desktop-only" /> finds the exact lessons across all your courses.</p>
         <a className="hero-cta" href="#courses">Explore Courses <Icon name="arrow" /></a>
-        <label className="home-search"><Icon name="search" /><input aria-label="Search your learning" placeholder="Ask anything about your learning..." /><kbd>⌘ K</kbd></label>
+        <form className="home-search" action="/search" method="get"><Icon name="search" /><input name="q" aria-label="Search your learning" placeholder="Ask anything about your learning..." /><kbd>⌘ K</kbd></form>
       </section>
 
       <section id="courses" className="home-courses" aria-labelledby="courses-title">

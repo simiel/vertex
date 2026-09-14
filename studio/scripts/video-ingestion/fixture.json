@@ -1,0 +1,28 @@
+{
+  "videos": [
+    {
+      "url": "https://youtu.be/9602Yzvd7ik?t=2",
+      "durationSeconds": 350,
+      "chapters": [
+        {"startSeconds": 0, "label": "  File-system   routing  "},
+        {"startSeconds": 24, "label": "Reserved files"}
+      ],
+      "transcript": [
+        {"startSeconds": 0, "text": "Folders map to URL segments."},
+        {"startSeconds": 8, "text": "Reserved files add framework behaviour."},
+        {"startSeconds": 40, "text": "Route groups organise files without changing the URL."}
+      ]
+    },
+    {
+      "url": "https://vimeo.com/12345678",
+      "durationSeconds": 90,
+      "chapters": [{"startSeconds": 0, "label": "Introduction"}],
+      "transcript": [{"startSeconds": 0, "text": "A short Vimeo lesson."}]
+    },
+    {
+      "url": "https://video.bunnycdn.com/play/library/video_123456",
+      "durationSeconds": 90,
+      "transcript": [{"startSeconds": 10, "text": "A Bunny lesson without authored chapters."}]
+    }
+  ]
+}
